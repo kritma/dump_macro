@@ -7,7 +7,7 @@
         uint32_t: "%s: %d\n", \
         float: "%s: %f\n", \
         const char*: "%s: %s\n",\
-        default: "well fuck"\
+        default: "well, fuck"\
     ), #name, var.name);
 
 #define DECLARE_FIELD(type, name) type name;
