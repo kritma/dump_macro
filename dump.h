@@ -1,24 +1,14 @@
 #include "sds/sds.h"
 #include <dlfcn.h>
+#include <stdio.h>
 
-typedef struct {
-  sds name;
-  sds (*to_string)(const void *);
-} ToStingsFn;
-
-size_t funs_count = 0;
-
-sds int_to_sds(const void *v) { return sdsfromlonglong(*(uint32_t *)v); }
-sds float_to_string(const void *v) {
-  return sdscatfmt(sdsempty(), "%s: %c\n", *(float *)v);
+sds cant_dump(void *v /*unused*/, sds /*unused*/ p) {
+  return sdsnew("<object>");
 }
-sds string_to_sds(const void *v) { return sdsnew(*(char **)v); }
 
-sds cant_dump(void *v) { return sdsnew("<object>"); }
-
-sds (*get_fun(char *name))(void *v) {
-  sds fname = sdscat(sdsnew("to_string_"), name);
-  sds (*fn)(void *v) = dlsym(RTLD_DEFAULT, fname);
+sds (*get_fun(char *name))(void *v, sds spit) {
+  sds fname = sdscat(sdsnew(name), "_to_string");
+  sds (*fn)(void *v, sds padding) = dlsym(RTLD_DEFAULT, fname);
   sdsfree(fname);
 
   if (!fn) {
@@ -30,28 +20,45 @@ sds (*get_fun(char *name))(void *v) {
 
 #define FIELD_TO_STRING(type, name)                                            \
   temp = _Generic((v->name), int                                           \
-                       : sdscatfmt(sdsempty(), "%s: %i\n", #name, v->name), long             \
-                       : sdscatfmt(sdsempty(), "%s: %I\n", #name, v->name), unsigned int         \
-                       : sdscatfmt(sdsempty(), "%s: %u\n", #name, v->name), unsigned long             \
-                       : sdscatfmt(sdsempty(), "%s: %U\n", #name, v->name), char            \
-                       : sdscatfmt(sdsempty(), "%s: %%\n", #name, v->name), char *           \
-                       : sdscatfmt(sdsempty(), "%s: %s\n", #name, v->name), const char *     \
-                       : sdscatfmt(sdsempty(), "%s: %s\n", #name, v->name), float            \
-                       : sdscatprintf(sdsempty(), "%s: %f\n", #name, v->name), double           \
-                       : sdscatprintf(sdsempty(), "%s: %lf\n", #name, v->name), default         \
-                       : sdscatfmt(sdsempty(), "%s: {\n%S}\n", #name, get_fun(#type)(&v->name)));   \
+                       : sdscatfmt(padd, "%s: %i", #name, v->name), long             \
+                       : sdscatfmt(padd, "%s: %I", #name, v->name), unsigned int         \
+                       : sdscatfmt(padd, "%s: %u", #name, v->name), unsigned long             \
+                       : sdscatfmt(padd, "%s: %U", #name, v->name), char            \
+                       : sdscatfmt(padd, "%s: %%", #name, v->name), char *           \
+                       : sdscatfmt(padd, "%s: %s", #name, v->name), const char *     \
+                       : sdscatfmt(padd, "%s: %s", #name, v->name), float            \
+                       : sdscatprintf(padd, "%s: %f", #name, v->name), double           \
+                       : sdscatprintf(padd, "%s: %lf", #name, v->name), default         \
+                       : sdscatfmt(padd, "%s: %S", #name, trash = get_fun(#type)(&v->name, sdscat(sdsdup(padding), "  "))));   \
   out = sdscat(out, temp);                                                     \
-  sdsfree(temp);
+  sdsfree(temp);                                                               \
+  sdsfree(trash);                                                              \
+  trash = NULL;                                                                \
+  padd = sdscat(sdsnew("\n  "), padding);
 
 #define DECLARE_FIELD(type, name) type name;
 
-#define DECLARE_STRUCT(NAME, FIELDS)                                           \
+#define DECLARE_STRUCT(TYPE_NAME)                                              \
   typedef struct {                                                             \
-    FIELDS(DECLARE_FIELD)                                                      \
-  }(NAME);                                                                     \
-  sds to_string_##NAME(NAME *v) {                                              \
-    sds out = sdsempty();                                                      \
+    TYPE_NAME##_FIELDS(DECLARE_FIELD)                                          \
+  }(TYPE_NAME);                                                                \
+  sds TYPE_NAME##_to_string(TYPE_NAME *v, sds padding) {                       \
+    int count = 0;                                                             \
+    sds out = sdsnew("{\n");                                                   \
     sds temp = sdsempty();                                                     \
-    FIELDS(FIELD_TO_STRING);                                                   \
+    sds padd = sdscat(sdsnew("  "), padding);                                  \
+    sds trash = sdsempty();                                                    \
+    _Pragma("clang diagnostic push");                                          \
+    _Pragma("clang diagnostic ignored \"-Wformat\"");                          \
+    TYPE_NAME##_FIELDS(FIELD_TO_STRING);                                       \
+    _Pragma("clang diagnostic pop");                                           \
+    out = sdscatfmt(out, "\n%S}", padding);                                    \
     return out;                                                                \
+  }
+
+#define DUMP(var, TYPE_NAME)                                                   \
+  {                                                                            \
+    sds str = TYPE_NAME##_to_string(&(var), sdsempty());                       \
+    printf("%s:%d\n%s: %s\n", __FILE__, __LINE__, #var, str);                  \
+    sdsfree(str);                                                              \
   }

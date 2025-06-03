@@ -1,29 +1,40 @@
 #include "dump.h"
+#include <stdint.h>
 #include <stdio.h>
 
-#define PERSON_FIELDS(X)                                                       \
-  X(uint32_t, age)                                                             \
-  X(const char *, name)
+#define Vec2_FIELDS(X)                                                         \
+  X(uint32_t, x)                                                               \
+  X(uint32_t, y)
+DECLARE_STRUCT(Vec2);
 
-DECLARE_STRUCT(Person, PERSON_FIELDS);
+typedef struct {
+  uint8_t r;
+  uint8_t g;
+  uint8_t b;
+  uint8_t a;
+} Color;
 
-#define STUDENT_FIELDS(X)                                                      \
-  X(Person, person)                                                            \
-  X(float, avg)
-
-DECLARE_STRUCT(Student, STUDENT_FIELDS);
+#define Square_FIELDS(X)                                                       \
+  X(Vec2, position)                                                            \
+  X(Color, color)                                                              \
+  X(float, rotation)                                                           \
+  X(float, size)
+DECLARE_STRUCT(Square);
 
 int main() {
-  Student var = {18, "Egorchik", 8};
-  sds s = to_string_Student(&var);
-  printf("%s\n", s);
+  Square square = {{69, 420}, {}, 3.14f / 2, 20};
+  DUMP(square, Square);
   /*
-   person: {
-   age: 18
-   name: Egorchik
-   }
-   avg: 8.000000
+    example.c:26
+    square: {
+      position: {
+        x: 69
+        y: 420
+      }
+      color: <object>
+      rotation: 1.570000
+      size: 20.000000
+    }
  */
-  sdsfree(s);
   return 0;
 }
