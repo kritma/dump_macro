@@ -1,19 +1,23 @@
 #include "dump.h"
+#include "sds/sds.h"
+#include <stdio.h>
 
-#define Zozin_fields                                                           \
-  FIELD_INFO(uint32_t, subscribers)                                            \
-  FIELD_INFO(float, salary)                                                    \
-  FIELD_INFO(const char *, name)
+#define PERSON_FIELDS(X)                                                       \
+  X(uint32_t, age)                                                             \
+  X(const char *, name)
 
-typedef struct {
-#define FIELD_INFO(type, name) DECLARE_FIELD(type, name);
-  Zozin_fields
-#define FIELD_INFO(type, name) PRINT_FIELD(type, name)
-} Zozin;
+DECLARE_STRUCT(Person, PERSON_FIELDS);
+
+#define STUDENT_FIELDS(X)                                                      \
+  X(Person, person)                                                            \
+  X(float, avg)
+
+DECLARE_STRUCT(Student, STUDENT_FIELDS);
 
 int main() {
-  Zozin var = {160000, 0, "Alexey Kutepov"};
-  dump(var, Zozin_fields);
-
+  Student var = {18, "Egorchik"};
+  sds s = to_string_Student(&var);
+  printf("%s\n", s);
+  sdsfree(s);
   return 0;
 }
