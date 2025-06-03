@@ -1,8 +1,5 @@
 #include "sds/sds.h"
 #include <dlfcn.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <stdio.h>
 
 typedef struct {
   sds name;
