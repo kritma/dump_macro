@@ -1,6 +1,4 @@
 #include "dump.h"
-#include <stdint.h>
-#include <stdio.h>
 
 #define Vec2_FIELDS(X)                                                         \
   X(uint32_t, x)                                                               \
@@ -15,25 +13,26 @@ typedef struct {
 } Color;
 
 #define Square_FIELDS(X)                                                       \
-  X(Vec2, position)                                                            \
+  X(Vec2 *, position)                                                          \
   X(Color, color)                                                              \
   X(float, rotation)                                                           \
-  X(float, size)
+  X(const float, size)
 DECLARE_STRUCT(Square);
 
 int main() {
-  Square square = {{69, 420}, {}, 3.14f / 2, 20};
+  Vec2 pos = {69, 420};
+  Square square = {&pos, {}, 3.14f / 2, 20};
   DUMP(square, Square);
   /*
-    example.c:26
-    square: {
-      position: {
-        x: 69
-        y: 420
+    example.c:25
+    square(Square): {
+      position(Vec2 *): {
+        x(uint32_t): 69
+        y(uint32_t): 420
       }
-      color: <object>
-      rotation: 1.570000
-      size: 20.000000
+      color(Color): <unknown>
+      rotation(float): 1.570000
+      size(const float): 20.000000
     }
  */
   return 0;
