@@ -18,13 +18,19 @@ DECLARE_STRUCT(Person, PERSON_FIELDS);
 DECLARE_STRUCT(Student, STUDENT_FIELDS);
 
 int main() {
-  Student var = {18, "Egorchik"};
+  Student var = {18, "Egorchik", 8};
   sds s = to_string_Student(&var);
   printf("%s\n", s);
+  /*
+   person: {
+   age: 18
+   name: Egorchik
+   }
+   avg: 8.000000
+ */
   sdsfree(s);
   return 0;
 }
-
 ```
 
 Actually uses dlsym, works on macos, maybe on linux too.
